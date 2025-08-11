@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from jobaman.logger import get_logger
 
 from .handlers import handle
-from .query import Query, parse_http_request
+from .query import Query
 
 log = get_logger(__name__)
 
@@ -35,7 +35,7 @@ def try_handle_client(conn, addr, config):
 def handle_client(conn, addr, config):
 
     request = conn.recv(MAX_REQUEST_BODY_SIZE).decode("utf-8", errors="ignore")
-    query: Query = parse_http_request(request, addr)
+    query = Query.parse_http_request(request, addr)
 
     rsp_code, rsp_data = handle(query, config)
     rsp_json = json.dumps(rsp_data, indent=1, ensure_ascii=False).encode("utf-8")
@@ -49,9 +49,9 @@ def handle_client(conn, addr, config):
 
 def run_server(config):
 
-    max_workers = int(config.get("server.max_workers", 4))
-    host = config.get("server.host", "127.0.0.1")
-    port = int(config.get("server.port", 1954))
+    max_workers = int(config.get("server-workers", 4))
+    host = config.get("server-listen-host", "127.0.0.1")
+    port = int(config.get("server-listen-port", 1954))
     listen_to = (host, port)
     config.http_server_address = f"http://{host}:{port}"
 

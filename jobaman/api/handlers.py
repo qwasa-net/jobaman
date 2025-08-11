@@ -2,13 +2,13 @@ import time
 
 from jobaman.logger import get_logger
 
-from .query import Query, params_to_args
+from .query import Query
 
 log = get_logger(__name__)
 
 
 def handle(query, config):
-    for route, handler in ROUTING_TABLE.items():
+    for route, handler in ROUTING_TABLE:
         if route.method is None or query.method == route.method:
             if route.path == "*" or str(query.path).startswith(route.path):
                 return handler(query, config)
@@ -21,9 +21,8 @@ def handle_ping(query, config=None):
 
 
 def handle_run_job(query, config):
-    cmd = params_to_args(query.params)
-    job_id = query.params.get("__job_id", None)
-    job_id = job_id[0] if isinstance(job_id, list) and job_id else None
+    cmd = query.params_to_args()
+    job_id = query.get_param("__job_id", None)
     try:
         real_job_id = config.manager.run_task(cmd, job_id=job_id)
     except ValueError as e:
@@ -54,8 +53,7 @@ def handle_list_jobs(query, config):
 
 
 def handle_kill_job(query, config):
-    job_id = query.params.get("__job_id", None)
-    job_id = job_id[0] if isinstance(job_id, list) else job_id
+    job_id = query.get_param("__job_id", None)
     try:
         config.manager[job_id].kill()
     except KeyError:
@@ -66,8 +64,7 @@ def handle_kill_job(query, config):
 
 
 def handle_output_job(query, config):
-    job_id = query.params.get("__job_id", None)
-    job_id = job_id[0] if isinstance(job_id, list) else job_id
+    job_id = query.get_param("__job_id", None)
     try:
         job = config.manager[job_id]
         stdout = job.stdout
@@ -84,10 +81,10 @@ def handle_output_job(query, config):
     }
 
 
-ROUTING_TABLE = {
-    Query(method="GET", path="/jobs/run"): handle_run_job,
-    Query(method="GET", path="/jobs/kill"): handle_kill_job,
-    Query(method="GET", path="/jobs/output"): handle_output_job,
-    Query(method="GET", path="/jobs/"): handle_list_jobs,
-    Query(method=None, path="/ping"): handle_ping,
-}
+ROUTING_TABLE = [
+    (Query(method="GET", path="/jobs/run"), handle_run_job),
+    (Query(method="GET", path="/jobs/kill"), handle_kill_job),
+    (Query(method="GET", path="/jobs/output"), handle_output_job),
+    (Query(method="GET", path="/jobs/"), handle_list_jobs),
+    (Query(method=None, path="/ping"), handle_ping),
+]
