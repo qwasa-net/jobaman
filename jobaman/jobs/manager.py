@@ -92,8 +92,9 @@ class Manager:
 
     @synchronized
     def shutdown(self):
-        """Terminate all running jobs."""
-        for job_id, job in self.running_jobs.items():
+        for job_id, job in self.jobs.items():
+            if job.state != JobState.RUNNING:
+                continue
             try:
                 job.kill()
                 log.info("job terminated: %s:%s", job_id, job)

@@ -48,7 +48,11 @@ lint:
 
 #
 unittests:
-	$(PYTHON) -m unittest discover -s tests
+	$(PYTHON) -m unittest discover \
+	--verbose \
+	--catch \
+	--pattern "test_*.py" \
+	--start-directory "$(HOME_DIR)/tests"
 
 
 #
