@@ -42,8 +42,8 @@ def handle_list_jobs(query, config):
                 "exit_code": job.exit_code,
                 "ts_started": job.ts_started,
                 "ts_completed": job.ts_completed,
-                "kill-link": f"{config.http_server_address}/jobs/kill?__job_id={job_id}",
-                "output-link": f"{config.http_server_address}/jobs/output?__job_id={job_id}",
+                "kill-link": f"{config.server_base_url}/jobs/kill?__job_id={job_id}",
+                "output-link": f"{config.server_base_url}/jobs/output?__job_id={job_id}",
             }
             for job_id, job in config.manager.running_jobs.items()
         }

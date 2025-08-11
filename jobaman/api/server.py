@@ -53,7 +53,7 @@ def run_server(config):
     host = config.get("server-listen-host", "127.0.0.1")
     port = int(config.get("server-listen-port", 1954))
     listen_to = (host, port)
-    config.http_server_address = f"http://{host}:{port}"
+    config.server_base_url = config.get("server-base-url", f"http://{host}:{port}")
 
     with (
         socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server,

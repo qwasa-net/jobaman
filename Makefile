@@ -7,6 +7,9 @@ VENV = $(HOME_DIR)/.venv
 PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 
+# docker stuff
+DOCKER := DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker
+
 # project code
 SRC_DIRS = "$(HOME_DIR)/jobaman" "$(HOME_DIR)/tests"
 
@@ -52,4 +55,12 @@ unittests:
 run: INI_FILE = "$(HOME_DIR)/jobaman.ini"
 run:
 	$(PYTHON) -m jobaman.main --ini-path $(INI_FILE)
+
+
+#
+docker-build:
+	$(DOCKER) build -f Dockerfile -t jobaman .
+
+docker-run:
+	docker run -p 11954:1954 --rm -it jobaman
 
