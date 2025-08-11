@@ -2,6 +2,7 @@ import argparse
 
 import jobaman.jobs.manager
 import jobaman.logger
+from jobaman.api.server import run_server
 from jobaman.config import Configuration
 
 log = jobaman.logger.get_logger(__name__)
@@ -12,11 +13,21 @@ def main():
     config = read_configuration()
 
     jobaman.logger.configure(config)
-    config.manager = jobaman.jobs.manager.Manager(config)  # type: ignore
+    manager = jobaman.jobs.manager.Manager(config)
+    config.manager = manager
 
     log.debug("jobaman config:")
     for key, value in config.as_dict().items():
         log.debug("%s=%s", key, value)
+
+    try:
+        run_server(config)
+    except KeyboardInterrupt:
+        log.info("shutting down on user interrupt")
+    except Exception as e:
+        log.error("fatal error: %s", e)
+    finally:
+        manager.shutdown()
 
 
 def read_configuration():

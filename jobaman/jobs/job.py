@@ -1,4 +1,6 @@
 import enum
+import os
+import signal
 import threading
 import time
 from collections import defaultdict
@@ -59,8 +61,12 @@ class Job:
             return
         self.process.terminate()
         threading.Event().wait(wait)
+        os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+        threading.Event().wait(wait)
         self.process.kill()
+        self.exit_code = -1
         self.state = JobState.KILLED
+        log.info("job killed: %s", self)
         self._close_handlers()
 
     @synchronized

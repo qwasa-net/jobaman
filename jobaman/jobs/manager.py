@@ -1,6 +1,5 @@
 import subprocess
 import threading
-import uuid
 
 from jobaman.helpers import synchronized
 from jobaman.jobs.job import Job, JobState
@@ -49,11 +48,12 @@ class Manager:
             errors="ignore",
             shell=False,
             bufsize=1,
+            start_new_session=True,
         )
-        job_id = job_id or str(process.pid) or str(uuid.uuid4())
+        job_id = job_id or str(process.pid)
         job = Job(process, state=JobState.RUNNING)
         self.jobs[job_id] = job
-        log.info("job started: %s", job)
+        log.info("job started: %s=%s", job_id, job)
         return job_id
 
     @synchronized
@@ -69,9 +69,28 @@ class Manager:
     def running_jobs(self):
         return {job_id: job for job_id, job in self.jobs.items() if job.state == JobState.RUNNING}
 
+    @property
+    @synchronized
+    def running_jobs_count(self):
+        return sum((1 for job in self.jobs.values() if job.state == JobState.RUNNING))
+
     @synchronized
     def purge(self):
-        self.jobs = {
-            job_id: job for job_id, job in self.jobs.items() if job.state not in (JobState.DONE, JobState.KILLED)
-        }
+        jobs = {}
+        for job_id, job in self.jobs.items():
+            if job.state not in (JobState.DONE, JobState.KILLED):
+                jobs[job_id] = job
+        self.jobs = jobs
         return len(self.jobs)
+
+    def shutdown(self):
+        """Terminate all running jobs."""
+        for job_id, job in self.running_jobs.items():
+            try:
+                job.kill()
+                log.info("job terminated: %s:%s", job_id, job)
+            except Exception as e:
+                log.error("error terminating job %s: %s", job_id, e)
+
+    def __del__(self):
+        self.shutdown()
