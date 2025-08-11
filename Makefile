@@ -49,6 +49,7 @@ unittests:
 
 
 #
-run-api:
-	$(PYTHON) -m jobaman.main --ini-path jobaman.ini --debug
+run: INI_FILE = "$(HOME_DIR)/jobaman.ini"
+run:
+	$(PYTHON) -m jobaman.main --ini-path $(INI_FILE)
 
