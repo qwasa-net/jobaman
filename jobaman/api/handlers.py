@@ -1,5 +1,6 @@
 import time
 
+from jobaman.helpers import human_time
 from jobaman.logger import get_logger
 
 from .query import Query
@@ -34,21 +35,20 @@ def handle_run_job(query, config):
 
 
 def handle_list_jobs(query, config):
-    rsp = {
-        "jobs": {
-            job_id: {
-                "state": job.state,
-                "pid": job.process.pid,
-                "exit_code": job.exit_code,
-                "ts_started": job.ts_started,
-                "ts_completed": job.ts_completed,
-                "kill-link": f"{config.server_base_url}/jobs/kill?__job_id={job_id}",
-                "output-link": f"{config.server_base_url}/jobs/output?__job_id={job_id}",
-            }
-            for job_id, job in config["manager"].running_jobs.items()
+    jobs = {
+        job_id: {
+            "state": job.state,
+            "pid": job.process.pid,
+            "exit_code": job.exit_code,
+            "ts_started": job.ts_started,
+            "ts_completed": job.ts_completed,
+            "run-time": human_time(job.runtime),
+            "kill-link": f"{config.server_base_url}/jobs/kill?__job_id={job_id}",
+            "output-link": f"{config.server_base_url}/jobs/output?__job_id={job_id}",
         }
+        for job_id, job in config["manager"].running_jobs.items()
     }
-    rsp["count"] = len(rsp["jobs"])
+    rsp = {"count": len(jobs), "jobs": jobs}
     return 200, rsp
 
 

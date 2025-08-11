@@ -3,9 +3,9 @@ import os
 import signal
 import threading
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 
-from jobaman.helpers import synchronized
+from jobaman.helpers import get_pids_by_ppid, synchronized
 from jobaman.logger import get_logger
 
 log = get_logger()
@@ -29,8 +29,8 @@ class Job:
         self.state = state
         self.exit_code = None
 
-        self.streams = defaultdict(list)
         self.streams_limit = self.STREAM_MAX_LINES_DEFAULT
+        self.streams = defaultdict(lambda: deque(maxlen=self.streams_limit))
 
         self.process_handlers = []
         self._start_process_handlers()
@@ -40,7 +40,7 @@ class Job:
 
     def __repr__(self) -> str:
         return (
-            f"JobInfo(state={self.state}, "
+            f"Job(state={self.state}, "
             f"pid={self.process.pid}, exit_code={self.exit_code}, "
             f"ts_started={self.ts_started}, ts_completed={self.ts_completed})"
         )
@@ -55,22 +55,28 @@ class Job:
         with self.lock:
             return "".join(self.streams["stderr"])
 
+    @property
+    def runtime(self):
+        if self.ts_completed is not None:
+            return int(self.ts_completed - self.ts_started)
+        return int(time.time()) - self.ts_started
+
     @synchronized
     def kill(self, wait=0.1):
         if self.state != JobState.RUNNING:
             return
+        pids = get_pids_by_ppid(self.process.pid)
+        pids.insert(0, self.process.pid)
+        log.info("killing job: %s, pids: %s", self, pids)
         self.process.terminate()
-        threading.Event().wait(wait)
-        if self.process.poll() is None:
+        time.sleep(wait)
+        for pid in pids:
             try:
-                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
-            except Exception as e:
-                log.error("error killing job process group: %s", e)
-        threading.Event().wait(wait)
-        try:
+                os.kill(pid, signal.SIGKILL)
+            except Exception:  # noqa
+                continue
+        if self.process.poll() is None:
             self.process.kill()
-        except Exception as e:
-            log.error("error killing job process: %s", e)
         self.exit_code = -1
         self.state = JobState.KILLED
         log.info("job killed: %s", self)
@@ -105,18 +111,19 @@ class Job:
                 for line in iter(stream.readline, ""):
                     with self.lock:
                         self.streams[stream_name].append(line)
-                        if len(self.streams[stream_name]) > self.streams_limit:
-                            self.streams[stream_name] = self.streams[stream_name][-(self.streams_limit * 0.8) :]
             except Exception as e:
                 log.error("Error reading %s stream: %s", stream_name, e)
                 self.streams[stream_name].append(str(e))
             finally:
                 if not stream.closed:
-                    stream.close()
+                    try:
+                        stream.close()
+                    except Exception as _:
+                        pass
 
-        def poll_job_completion():
+        def poll_job_completion(wait=0.5):
             while self.state == JobState.RUNNING and self.process.poll() is None:
-                threading.Event().wait(0.5)
+                threading.Event().wait(wait)
             self.wait_job_completion()
 
         self.process_handlers = [
@@ -126,3 +133,6 @@ class Job:
         ]
 
         _ = list(map(lambda t: t.start(), self.process_handlers))
+
+    def __del__(self):
+        self.kill()

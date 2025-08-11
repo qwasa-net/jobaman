@@ -7,6 +7,10 @@ from tests.base import BaseTestCase
 
 class TestManager(BaseTestCase, unittest.TestCase):
 
+    def tearDown(self) -> None:
+        time.sleep(1 / 5)
+        return super().tearDown()
+
     def test_10_run_date_task(self):
         manager = Manager(config={"max_jobs": 2, "entrypoint": None})
         job_id = manager.run_task(["date", "--utc", "--iso-8601=seconds"])
@@ -34,6 +38,7 @@ class TestManager(BaseTestCase, unittest.TestCase):
             job_id = manager.run_task(["sleep", "5"])
             job_ids.append(job_id)
             self.assertEqual(manager.running_jobs_count, len(job_ids))
+        time.sleep(1 / 5)
         with self.assertRaises(ValueError):
             manager.run_task(["date"])
         manager.shutdown()
@@ -42,5 +47,6 @@ class TestManager(BaseTestCase, unittest.TestCase):
         manager = Manager(config={"max_jobs": n, "entrypoint": None})
         job_id = manager.run_task(["sleep", "5"])
         job = manager[job_id]
+        time.sleep(1 / 5)
         manager.shutdown()
         self.assertEqual(job.state, JobState.KILLED)
