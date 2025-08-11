@@ -1,0 +1,12 @@
+# . _
+[._]*/
+
+# py
+__pycache__/
+*.py[cod]
+
+# garbage
+*.log
+*.tmp
+*.bak
+*.swp
