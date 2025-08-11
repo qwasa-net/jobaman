@@ -61,7 +61,11 @@ class Job:
             return
         self.process.terminate()
         threading.Event().wait(wait)
-        os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+        if self.process.poll() is None:
+            try:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            except Exception as e:
+                log.error("error killing job process group: %s", e)
         threading.Event().wait(wait)
         self.process.kill()
         self.exit_code = -1
