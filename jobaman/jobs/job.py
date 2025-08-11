@@ -67,7 +67,10 @@ class Job:
             except Exception as e:
                 log.error("error killing job process group: %s", e)
         threading.Event().wait(wait)
-        self.process.kill()
+        try:
+            self.process.kill()
+        except Exception as e:
+            log.error("error killing job process: %s", e)
         self.exit_code = -1
         self.state = JobState.KILLED
         log.info("job killed: %s", self)

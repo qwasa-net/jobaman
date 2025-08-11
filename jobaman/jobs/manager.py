@@ -90,6 +90,7 @@ class Manager:
         self.jobs = jobs
         return len(self.jobs)
 
+    @synchronized
     def shutdown(self):
         """Terminate all running jobs."""
         for job_id, job in self.running_jobs.items():
