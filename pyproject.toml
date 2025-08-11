@@ -1,0 +1,20 @@
+[project]
+name = "jobaman"
+version = "0.0.1"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["A", "B", "LOG", "G", "Q", "I", "E", "F", "N", "PLC", "PLE", "PLR", "PLW", "RET"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
