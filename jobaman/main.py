@@ -4,6 +4,7 @@ import jobaman.jobs.manager
 import jobaman.logger
 from jobaman.api.server import run_server
 from jobaman.config import Configuration
+from jobaman.helpers import run_command
 
 log = jobaman.logger.get_logger(__name__)
 
@@ -14,11 +15,13 @@ def main():
 
     jobaman.logger.configure(config)
     manager = jobaman.jobs.manager.Manager(config)
-    config.manager = manager
+    config["manager"] = manager
 
     log.debug("jobaman config:")
     for key, value in config.as_dict().items():
         log.debug("%s=%s", key, value)
+
+    run_command(config["startup_command"], "startup")
 
     try:
         run_server(config)
@@ -28,6 +31,8 @@ def main():
         log.error("fatal error: %s", e)
     finally:
         manager.shutdown()
+
+    run_command(config["shutdown_command"], "shutdown")
 
 
 def read_configuration():

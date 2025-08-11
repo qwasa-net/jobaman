@@ -24,12 +24,12 @@ def handle_run_job(query, config):
     cmd = query.params_to_args()
     job_id = query.get_param("__job_id", None)
     try:
-        real_job_id = config.manager.run_task(cmd, job_id=job_id)
+        real_job_id = config["manager"].run_task(cmd, job_id=job_id)
     except ValueError as e:
         return 400, {"error": str(e)}
     return 200, {
         "job_id": real_job_id,
-        "running": config.manager.running_jobs_count,
+        "running": config["manager"].running_jobs_count,
     }
 
 
@@ -45,7 +45,7 @@ def handle_list_jobs(query, config):
                 "kill-link": f"{config.server_base_url}/jobs/kill?__job_id={job_id}",
                 "output-link": f"{config.server_base_url}/jobs/output?__job_id={job_id}",
             }
-            for job_id, job in config.manager.running_jobs.items()
+            for job_id, job in config["manager"].running_jobs.items()
         }
     }
     rsp["count"] = len(rsp["jobs"])
@@ -55,7 +55,7 @@ def handle_list_jobs(query, config):
 def handle_kill_job(query, config):
     job_id = query.get_param("__job_id", None)
     try:
-        config.manager[job_id].kill()
+        config["manager"][job_id].kill()
     except KeyError:
         return 404, {"error": f"job_id {job_id} not found"}
     except Exception as e:
@@ -66,7 +66,7 @@ def handle_kill_job(query, config):
 def handle_output_job(query, config):
     job_id = query.get_param("__job_id", None)
     try:
-        job = config.manager[job_id]
+        job = config["manager"][job_id]
         stdout = job.stdout
         stderr = job.stderr
     except KeyError:
