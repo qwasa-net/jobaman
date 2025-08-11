@@ -21,6 +21,7 @@ class Manager:
 
     def configure(self, config):
         self.entrypoint = config.get("entrypoint", self.ENTRYPOINT_DEFAULT)
+        self.max_jobs = int(config.get("max_jobs", 10))
 
     def _build_command(self, command):
         if not command and not self.entrypoint:
@@ -37,6 +38,8 @@ class Manager:
     def run_task(self, command, job_id=None):
         if job_id and job_id in self.jobs and self.jobs[job_id].state == JobState.RUNNING:
             raise ValueError(f"job_id {job_id} already exists and is running")
+        if self._running_jobs_count >= self.max_jobs:
+            raise ValueError("max_jobs limit reached")
         command_run = self._build_command(command)
         log.debug("command=%s", command_run)
         process = subprocess.Popen(
@@ -70,9 +73,13 @@ class Manager:
         return {job_id: job for job_id, job in self.jobs.items() if job.state == JobState.RUNNING}
 
     @property
+    def _running_jobs_count(self):
+        return sum((1 for job in self.jobs.values() if job.state == JobState.RUNNING))
+
+    @property
     @synchronized
     def running_jobs_count(self):
-        return sum((1 for job in self.jobs.values() if job.state == JobState.RUNNING))
+        return self._running_jobs_count
 
     @synchronized
     def purge(self):
