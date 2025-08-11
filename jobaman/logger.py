@@ -6,10 +6,17 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
 def configure(
+    config=None,
     level=logging.INFO,
     log_format=None,
+    log_date=DATE_FORMAT,
     name=None,
 ):
+
+    if config:
+        level = config.get("log-level", level)
+        log_format = config.get("log-format", log_format)
+        log_date = config.get("log-date", log_date)
 
     log_format = log_format or LOG_FORMAT
 
@@ -17,7 +24,7 @@ def configure(
     root.handlers.clear()
     root.setLevel(level)
 
-    formatter = logging.Formatter(log_format, datefmt=DATE_FORMAT)
+    formatter = logging.Formatter(log_format, datefmt=log_date)
 
     error_handler = logging.StreamHandler(sys.stderr)
     error_handler.setFormatter(formatter)

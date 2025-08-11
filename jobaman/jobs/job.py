@@ -1,5 +1,6 @@
 import enum
 import threading
+import time
 from collections import defaultdict
 
 from jobaman.helpers import synchronized
@@ -32,8 +33,15 @@ class Job:
         self.process_handlers = []
         self._start_process_handlers()
 
+        self.ts_started = int(time.time())
+        self.ts_completed = None
+
     def __repr__(self) -> str:
-        return f"JobInfo(state={self.state}, exit_code={self.exit_code}, pid={self.process.pid})"
+        return (
+            f"JobInfo(state={self.state}, "
+            f"pid={self.process.pid}, exit_code={self.exit_code}, "
+            f"ts_started={self.ts_started}, ts_completed={self.ts_completed})"
+        )
 
     @property
     def stdout(self):
@@ -46,11 +54,11 @@ class Job:
             return "".join(self.streams["stderr"])
 
     @synchronized
-    def kill(self):
+    def kill(self, wait=0.1):
         if self.state != JobState.RUNNING:
             return
         self.process.terminate()
-        threading.Event().wait(1.0)
+        threading.Event().wait(wait)
         self.process.kill()
         self.state = JobState.KILLED
         self._close_handlers()
@@ -66,6 +74,7 @@ class Job:
             self.exit_code = self.process.returncode
             self.state = JobState.DONE
             self._close_handlers()
+            self.ts_completed = int(time.time())
         log.info("job completed: %s", self)
         return self.exit_code
 

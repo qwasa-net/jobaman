@@ -1,17 +1,28 @@
 import argparse
-import time
 
-import jobaman.jobs
+import jobaman.jobs.manager
 import jobaman.logger
-from jobaman.config import config
+from jobaman.config import Configuration
 
-log = jobaman.logger.get_logger()
+log = jobaman.logger.get_logger(__name__)
 
 
 def main():
 
-    params = parse_cli_params()
+    config = read_configuration()
 
+    jobaman.logger.configure(config)
+    config.manager = jobaman.jobs.manager.Manager(config)  # type: ignore
+
+    log.debug("jobaman config:")
+    for key, value in config.as_dict().items():
+        log.debug("%s=%s", key, value)
+
+
+def read_configuration():
+    config = Configuration()
+
+    params = parse_cli_params()
     ini_path = params.pop("ini_path", None)
     ini_section = params.pop("ini_section", None)
     env_prefix = params.pop("env_prefix", "JOBAMAN")
@@ -25,33 +36,7 @@ def main():
         env_prefix=env_prefix,
     )
 
-    jobaman.logger.configure(
-        level=config.get("log-level", "INFO"),
-        log_format=config.get("log-format"),
-    )
-
-    log.debug("jobaman config:")
-    for key, value in config.as_dict().items():
-        log.debug("%s=%s", key, value)
-
-    run(config)
-
-
-def run(cfg):
-
-    man = jobaman.jobs.manager
-
-    # FIXME # FIXME # FIXME
-    command = ["/bin/bash", "-c", "echo 'hallo!'; sleep 2; ls /hallo; echo 'bye!'; exit ${RANDOM}"]
-    for _i in range(3):
-        job_id = man.run_task(command)
-        job = man[job_id]
-        print(f"{job_id=}, {job=} {len(man)=}")
-
-    time.sleep(3.3)
-
-    for job_id, job in man.jobs.items():
-        print(f"{job_id=}, {job=}, \n{job.stdout=}\n{job.stderr=}")
+    return config
 
 
 def parse_cli_params():

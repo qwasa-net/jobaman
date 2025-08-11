@@ -11,26 +11,49 @@ log = get_logger()
 
 class Manager:
 
-    def __init__(self):
+    CMD_ENCODING = "utf-8"
+    ENTRYPOINT_DEFAULT = None
+
+    def __init__(self, config=None):
         self.jobs = {}
         self.lock = threading.Lock()
+        if config:
+            self.configure(config)
+
+    def configure(self, config):
+        self.entrypoint = config.get("entrypoint", self.ENTRYPOINT_DEFAULT)
+
+    def _build_command(self, command):
+        if not command and not self.entrypoint:
+            raise ValueError("no command or entrypoint")
+        if not command:
+            command = []
+        if isinstance(command, str):
+            command = [command]
+        if self.entrypoint:
+            return [self.entrypoint] + command
+        return command
 
     @synchronized
-    def run_task(self, command):
+    def run_task(self, command, job_id=None):
+        if job_id and job_id in self.jobs and self.jobs[job_id].state == JobState.RUNNING:
+            raise ValueError(f"job_id {job_id} already exists and is running")
+        command_run = self._build_command(command)
+        log.debug("command=%s", command_run)
         process = subprocess.Popen(
-            command,
+            command_run,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            encoding="utf-8",
+            encoding=self.CMD_ENCODING,
             errors="ignore",
             shell=False,
-            bufsize=0,
+            bufsize=1,
         )
-        job_id = str(process.pid) or str(uuid.uuid4())
-        info = Job(process, state=JobState.RUNNING)
-        self.jobs[job_id] = info
-        log.info("job #`%s`: %.100s", job_id, command)
+        job_id = job_id or str(process.pid) or str(uuid.uuid4())
+        job = Job(process, state=JobState.RUNNING)
+        self.jobs[job_id] = job
+        log.info("job started: %s", job)
         return job_id
 
     @synchronized
@@ -41,8 +64,9 @@ class Manager:
     def __len__(self):
         return len(self.jobs)
 
+    @property
     @synchronized
-    def list_running_jobs(self):
+    def running_jobs(self):
         return {job_id: job for job_id, job in self.jobs.items() if job.state == JobState.RUNNING}
 
     @synchronized

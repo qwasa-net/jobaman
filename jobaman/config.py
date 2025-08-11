@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 
 
-class Config:
+class Configuration(object):
 
     def __init__(self):
         self._config = defaultdict(str)
@@ -68,6 +68,3 @@ class Config:
     def __contains__(self, key):
         key = key.lower().replace("-", "_")
         return key in self._config
-
-
-config = Config()
